@@ -58,7 +58,7 @@ function AppShell() {
         <aside className={`sidebar ${sidebarOpen ? 'is-open' : ''}`}>
           <div className="brand-lockup"><div className="brand-mark" aria-hidden="true"><Flame className="brand-flame" size={19} strokeWidth={2.2} /><Sparkles className="brand-spark" size={10} strokeWidth={2.5} /></div><div><strong>STARTA<span>FORGE</span></strong><small>Official Statistics Learning</small></div></div>
           <div className="workspace-menu-wrap"><button className="workspace-switcher" aria-expanded={workspaceOpen} onClick={() => { setWorkspaceOpen(!workspaceOpen); setProfileOpen(false) }}><span className="avatar avatar-saffron">AS</span><div><strong>Dr. Ananya Sharma</strong><small>MoSPI · Directorate</small></div><ChevronDown size={15} /></button>{workspaceOpen && <div className="popover workspace-popover"><p className="popover-label">Current workspace</p><button className="workspace-option selected"><span className="avatar avatar-saffron">AS</span><span><strong>DIID · MoSPI</strong><small>Directorate workspace</small></span><Check size={14} /></button><button className="workspace-option" onClick={() => { setWorkspaceOpen(false); setToastVisible(true) }}><span className="avatar avatar-navy">NS</span><span><strong>NSO · MoSPI</strong><small>National Statistics Office</small></span></button></div>}</div>
-          <nav className="side-nav" aria-label="Primary navigation">
+          <nav className="side-nav" aria-label="Primary navigation" onClick={() => setSidebarOpen(false)}>
             <p className="nav-label">Workspace</p>
             <NavItem to="/" icon={<Home size={17} />} label="Overview" end />
             <NavItem to="/learning" icon={<BookOpen size={17} />} label="My learning" />
