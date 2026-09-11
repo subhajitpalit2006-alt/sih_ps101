@@ -116,18 +116,15 @@
 .access-note{display:flex;gap:8px;align-items:start;color:var(--muted);font-size:9px;line-height:1.5;margin-top:15px}
 .access-note svg{color:var(--blue);flex:0 0 auto}
 .toast{width:min(310px,calc(100vw - 32px));max-width:310px;right:16px;bottom:16px;z-index:100;box-sizing:border-box}
-.progression-panel .progression-rail{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;gap:0;margin:34px 0 8px;padding:0;align-items:start;position:relative}
-.progression-panel .rail-line{top:14px;left:16.666%;right:16.666%;height:3px}
+.progression-panel .progression-rail{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:22px auto;gap:0;row-gap:4px;margin:10px 0 8px;padding:0;align-items:start;position:relative}
+.progression-panel .rail-line{top:40px;left:16.666%;right:16.666%;height:3px}
 .progression-panel .rail-complete{width:54%}
 .progression-panel .progression-step{display:grid;grid-template-columns:1fr;grid-template-rows:29px auto;position:relative;min-width:0;gap:0;text-align:left}
 .progression-panel .progression-step .progression-number{grid-column:1;grid-row:1;justify-self:center}
 .progression-panel .progression-step>div{grid-column:1;grid-row:2;padding-top:17px;min-width:0}
 .progression-panel .progression-step>b{position:absolute;top:-27px;left:100%;transform:translateX(-50%);z-index:2;margin:0;white-space:nowrap}
 .progression-panel .progression-step:last-child>b{left:50%}
-.progression-panel .progression-value{position:absolute;top:-28px;z-index:2;color:var(--navy);font-size:12px;font-weight:700;line-height:17px;white-space:nowrap;transform:translateX(-50%)}
-.progression-panel .value-first{left:33.333%}
-.progression-panel .value-second{left:66.666%}
-.progression-panel .value-target{left:100%}
+.progression-panel .progression-value{color:var(--navy);font-size:12px;font-weight:700;line-height:17px;white-space:nowrap;justify-self:center;align-self:end}
 .progression-panel .progression-step>b{display:none}
 @media (max-width:900px){
 .sidebar{width:220px;transform:translateX(-100%);margin-left:0}
