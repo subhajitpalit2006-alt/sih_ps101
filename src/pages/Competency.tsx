@@ -1,0 +1,23 @@
+import { useEffect, useState } from 'react'
+import { Check, ShieldCheck, Sparkles } from 'lucide-react'
+import { analysisStages } from '../data/mock'
+import { FormField, ProcessingState, SkillGapReport } from '../components/parts'
+
+export function CompetencyAnalysis() {
+  const [form, setForm] = useState({ designation: 'Senior Statistical Officer', department: 'Directorate of Industrial and Internal Trade', experience: '8–12 years', responsibilities: 'Design and review enterprise surveys, validate official estimates, and guide statistical data quality processes.', education: 'M.Sc. Statistics', training: 'National Sample Survey Methods; Official Statistics and Data Quality' })
+  const [status, setStatus] = useState<'form' | 'processing' | 'report'>('form')
+  const [stage, setStage] = useState(0)
+
+  useEffect(() => {
+    if (status !== 'processing') return
+    const timer = window.setInterval(() => setStage((current) => Math.min(current + 1, analysisStages.length - 1)), 850)
+    const complete = window.setTimeout(() => setStatus('report'), 4800)
+    return () => { window.clearInterval(timer); window.clearTimeout(complete) }
+  }, [status])
+
+  const updateField = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }))
+  if (status === 'processing') return <ProcessingState stage={stage} />
+  if (status === 'report') return <SkillGapReport designation={form.designation} onReanalyse={() => { setStage(0); setStatus('form') }} />
+
+  return <div className="page-container analysis-page"><div className="analysis-heading"><div><p className="eyebrow">Skill intelligence · AI-assisted analysis</p><h1>Analyse your competencies</h1><p className="heading-copy">Create a role-aligned capability profile using your current responsibilities, experience and learning record.</p></div><span className="privacy-note"><ShieldCheck size={14} /> Mock analysis · no personal data stored</span></div><div className="analysis-layout"><section className="panel analysis-form-panel"><div className="panel-header"><div><p className="eyebrow">Step 1 of 2</p><h2>Tell us about your role</h2></div><span className="form-required">* Required fields</span></div><p className="panel-description">The more context you provide, the more relevant the competency mapping will be for your official-statistics responsibilities.</p><div className="form-grid"><FormField label="Designation" required><input className="text-input" value={form.designation} onChange={(event) => updateField('designation', event.target.value)} /></FormField><FormField label="Department / organisation" required><input className="text-input" value={form.department} onChange={(event) => updateField('department', event.target.value)} /></FormField><FormField label="Years of experience" required><select className="text-input" value={form.experience} onChange={(event) => updateField('experience', event.target.value)}><option>0–3 years</option><option>4–7 years</option><option>8–12 years</option><option>13+ years</option></select></FormField><FormField label="Educational background" required><input className="text-input" value={form.education} onChange={(event) => updateField('education', event.target.value)} /></FormField><FormField label="Key responsibilities" wide><textarea className="text-input form-textarea" value={form.responsibilities} onChange={(event) => updateField('responsibilities', event.target.value)} /></FormField><FormField label="Previous training and certifications" wide><textarea className="text-input form-textarea" value={form.training} onChange={(event) => updateField('training', event.target.value)} /></FormField></div><div className="form-actions"><span><span className="status-dot"></span>Ready to analyse</span><button className="button button-primary" onClick={() => { setStage(0); setStatus('processing') }}>Analyze my skills <Sparkles size={16} /></button></div></section><aside className="panel analysis-aside"><div className="analysis-aside-icon"><Sparkles size={19} /></div><h2>What the analysis does</h2><p>We compare your profile with the National Competency Framework for Official Statisticians and your mapped role requirements.</p><div className="analysis-feature"><Check size={14} /><span>Maps responsibilities to core statistical competencies</span></div><div className="analysis-feature"><Check size={14} /><span>Identifies priority gaps against your role level</span></div><div className="analysis-feature"><Check size={14} /><span>Suggests practical, role-relevant learning actions</span></div><div className="analysis-aside-footer"><ShieldCheck size={15} /><span>Results are indicative and should be reviewed with your supervisor.</span></div></aside></div></div>
+}

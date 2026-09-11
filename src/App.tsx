@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, Award, Bell, BookOpen, Check, ChevronDown, ChevronRight,
-  CircleHelp, Clock3, FileBarChart, FileText, Flame, Home, LayoutGrid, Menu, MoreHorizontal,
-  PlayCircle, Search, Settings, ShieldCheck, Sparkles, Target, UploadCloud, Users, X,
+  Activity, Bell, BookOpen, Check, ChevronDown, ChevronRight, CircleHelp, Clock3,
+  FileBarChart, Flame, Home, LayoutGrid, Menu, Search, Settings, ShieldCheck,
+  Sparkles, Users, X,
 } from 'lucide-react'
+import type { SearchEntry } from './data/mock'
+import { fetchSearchIndex } from './services/api'
+import { AccessPrivacyDialog, Modal, NavItem } from './components/parts'
+import { LearnerDashboard } from './pages/Dashboard'
+import { LearningPath } from './pages/LearningPath'
+import { AssessmentEngine } from './pages/Assessment'
+import { CompetencyAnalysis } from './pages/Competency'
+import { OfficerDirectory } from './pages/Directory'
+import { PlatformSettings } from './pages/Settings'
 import './App.css'
 
 function App() {
@@ -21,6 +30,7 @@ function AppShell() {
   const [accessOpen, setAccessOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchIndex, setSearchIndex] = useState<SearchEntry[]>([])
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -29,6 +39,14 @@ function AppShell() {
     const timer = window.setTimeout(() => setToastVisible(false), 4500)
     return () => window.clearTimeout(timer)
   }, [toastVisible])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchSearchIndex().then((entries) => {
+      if (!cancelled) setSearchIndex(entries)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     const handleNotificationAction = (event: Event) => {
@@ -53,205 +71,172 @@ function AppShell() {
     return () => document.removeEventListener('click', handleAccessAction)
   }, [])
 
+  const trimmedQuery = searchQuery.trim()
+  const searchResults = trimmedQuery
+    ? searchIndex.filter((entry) => `${entry.label} ${entry.sublabel}`.toLowerCase().includes(trimmedQuery.toLowerCase()))
+    : []
+
+  const runSearch = () => {
+    if (!trimmedQuery) return
+    const query = trimmedQuery.toLowerCase()
+    const match = searchIndex.find((entry) => entry.label.toLowerCase().includes(query))
+    if (match) {
+      setSearchQuery('')
+      navigate(match.route)
+    }
+  }
+
+  const searchIcon = (route: string) => {
+    if (route === '/skills') return <LayoutGrid size={14} />
+    if (route === '/assessment') return <Sparkles size={14} />
+    if (route === '/learning') return <BookOpen size={14} />
+    if (route === '/directory') return <Users size={14} />
+    if (route === '/settings') return <Settings size={14} />
+    return <Home size={14} />
+  }
+
+  const breadcrumbLabel =
+    location.pathname === '/skills' ? 'AI competency analysis'
+    : location.pathname === '/learning' ? 'Personalized learning path'
+    : location.pathname === '/assessment' ? 'AI assessment engine'
+    : location.pathname === '/directory' ? 'Officer directory'
+    : location.pathname === '/settings' ? 'Settings'
+    : 'Learner dashboard'
+
   return (
     <div className="app-shell">
-        <aside className={`sidebar ${sidebarOpen ? 'is-open' : ''}`}>
-          <div className="brand-lockup"><div className="brand-mark" aria-hidden="true"><Flame className="brand-flame" size={19} strokeWidth={2.2} /><Sparkles className="brand-spark" size={10} strokeWidth={2.5} /></div><div><strong>STARTA<span>FORGE</span></strong><small>Official Statistics Learning</small></div></div>
-          <div className="workspace-menu-wrap"><button className="workspace-switcher" aria-expanded={workspaceOpen} onClick={() => { setWorkspaceOpen(!workspaceOpen); setProfileOpen(false) }}><span className="avatar avatar-saffron">AS</span><div><strong>Dr. Ananya Sharma</strong><small>MoSPI · Directorate</small></div><ChevronDown size={15} /></button>{workspaceOpen && <div className="popover workspace-popover"><p className="popover-label">Current workspace</p><button className="workspace-option selected"><span className="avatar avatar-saffron">AS</span><span><strong>DIID · MoSPI</strong><small>Directorate workspace</small></span><Check size={14} /></button><button className="workspace-option" onClick={() => { setWorkspaceOpen(false); setToastVisible(true) }}><span className="avatar avatar-navy">NS</span><span><strong>NSO · MoSPI</strong><small>National Statistics Office</small></span></button></div>}</div>
-          <nav className="side-nav" aria-label="Primary navigation" onClick={() => setSidebarOpen(false)}>
-            <p className="nav-label">Workspace</p>
-            <NavItem to="/" icon={<Home size={17} />} label="Overview" end />
-            <NavItem to="/learning" icon={<BookOpen size={17} />} label="My learning" />
-            <NavItem to="/skills" icon={<LayoutGrid size={17} />} label="Skill intelligence" />
-            <NavItem to="/assessment" icon={<Sparkles size={17} />} label="Assessment engine" />
-            <NavItem to="/reports" icon={<FileBarChart size={17} />} label="Reports" />
-            <p className="nav-label nav-label-spaced">Administration</p>
-            <NavItem to="/directory" icon={<Users size={17} />} label="Officer directory" />
-            <NavItem to="/settings" icon={<Settings size={17} />} label="Settings" />
-          </nav>
-          <div className="sidebar-footer"><button className="help-link" onClick={() => setHelpOpen(true)}><CircleHelp size={17} /><span>Help &amp; guidance</span></button><div className="version"><span className="status-dot"></span>Prototype v0.1 · NIC hosted</div></div>
-        </aside>
-        <main className="main-area">
-          <header className="topbar"><button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setSidebarOpen(!sidebarOpen)}><Menu size={20} /></button><div className="breadcrumb"><span>Workspace</span><ChevronRight size={14} /><strong>{location.pathname === '/skills' ? 'AI competency analysis' : location.pathname === '/learning' ? 'Personalized learning path' : location.pathname === '/assessment' ? 'AI assessment engine' : location.pathname === '/directory' ? 'Officer directory' : location.pathname === '/settings' ? 'Settings' : 'Learner dashboard'}</strong></div><div className="topbar-actions"><div className="topbar-search"><Search size={17} /><input aria-label="Search" placeholder="Search learning, skills or reports" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /><button className="search-submit" aria-label="Run search" onClick={() => setSearchQuery(searchQuery.trim())}><ChevronRight size={14} /></button>{searchQuery && <div className="search-results"><p>Search results</p><button onClick={() => navigate('/learning')}><BookOpen size={14} /><span><strong>My learning</strong><small>Personalized learning path</small></span></button><button onClick={() => navigate('/skills')}><LayoutGrid size={14} /><span><strong>Skill intelligence</strong><small>AI competency analysis</small></span></button><button onClick={() => navigate('/assessment')}><Sparkles size={14} /><span><strong>Assessment engine</strong><small>Generate a knowledge check</small></span></button></div>}</div><div className="popover-wrap"><button className="icon-button notification-button" aria-label="Notifications" aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false) }}><Bell size={18} /><span className="notification-dot"></span></button>{notificationsOpen && <div className="popover notification-popover"><div className="popover-heading"><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)}>Mark read</button></div><div className="notification-item"><span className="notification-icon"><Activity size={14} /></span><span><strong>Competency profile updated</strong><small>Today · Your latest assessment is now reflected.</small></span></div><div className="notification-item"><span className="notification-icon amber"><Clock3 size={14} /></span><span><strong>Learning reminder</strong><small>Python for Official Statistics is due this month.</small></span></div></div>}</div><div className="popover-wrap"><button className="topbar-profile" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false) }}><span className="avatar avatar-navy">AS</span><ChevronDown size={15} /></button>{profileOpen && <div className="popover profile-popover"><div className="profile-popover-header"><span className="avatar avatar-navy">AS</span><span><strong>Dr. Ananya Sharma</strong><small>Senior Statistical Officer</small></span></div><button onClick={() => { setProfileOpen(false); navigate('/settings') }}><Settings size={14} /> Account settings</button><button onClick={() => setProfileOpen(false)}><ShieldCheck size={14} /> Access and privacy</button><button className="profile-signout" onClick={() => setProfileOpen(false)}>Sign out</button></div>}</div></div></header>
-          <Routes><Route path="/skills" element={<CompetencyAnalysis />} /><Route path="/learning" element={<LearningPath />} /><Route path="/assessment" element={<AssessmentEngine />} /><Route path="/directory" element={<OfficerDirectory />} /><Route path="/settings" element={<PlatformSettings />} /><Route path="*" element={<LearnerDashboard onOpenModal={() => setModalOpen(true)} />} /></Routes>
-        </main>
-        {toastVisible && <div className="toast" role="status"><div className="toast-icon"><Check size={15} /></div><div><strong>Learning record synced</strong><span>Your competency profile is up to date.</span></div><button className="toast-close" aria-label="Dismiss notification" onClick={() => setToastVisible(false)}><X size={15} /></button></div>}
-        {modalOpen && <Modal onClose={() => setModalOpen(false)} />}
-        {helpOpen && <div className="help-backdrop" onClick={() => setHelpOpen(false)}><aside className="help-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><div className="help-drawer-header"><div><p className="eyebrow">Support centre</p><h2>Help &amp; guidance</h2></div><button className="icon-button" aria-label="Close help" onClick={() => setHelpOpen(false)}><X size={18} /></button></div><p>Find guidance for using SkillSetu and managing your learning record.</p><button className="help-topic"><CircleHelp size={16} /><span><strong>Using your dashboard</strong><small>Understand competency scores and progress.</small></span><ChevronRight size={15} /></button><button className="help-topic"><BookOpen size={16} /><span><strong>Learning and assessments</strong><small>Get help with courses and knowledge checks.</small></span><ChevronRight size={15} /></button><button className="help-topic"><Users size={16} /><span><strong>Contact your administrator</strong><small>Reach your departmental learning coordinator.</small></span><ChevronRight size={15} /></button><div className="help-contact"><strong>Need more support?</strong><span>Submit a request through your departmental helpdesk.</span></div></aside></div>}
-        {accessOpen && <AccessPrivacyDialog onClose={() => setAccessOpen(false)} />}
-    </div>
-  )
-}
+      <aside className={`sidebar ${sidebarOpen ? 'is-open' : ''}`}>
+        <div className="brand-lockup">
+          <div className="brand-mark" aria-hidden="true"><Flame className="brand-flame" size={19} strokeWidth={2.2} /><Sparkles className="brand-spark" size={10} strokeWidth={2.5} /></div>
+          <div><strong>STARTA<span>FORGE</span></strong><small>Official Statistics Learning</small></div>
+        </div>
+        <div className="workspace-menu-wrap">
+          <button className="workspace-switcher" aria-expanded={workspaceOpen} onClick={() => { setWorkspaceOpen(!workspaceOpen); setProfileOpen(false) }}>
+            <span className="avatar avatar-saffron">AS</span>
+            <div><strong>Dr. Ananya Sharma</strong><small>MoSPI · Directorate</small></div>
+            <ChevronDown size={15} />
+          </button>
+          {workspaceOpen && (
+            <div className="popover workspace-popover">
+              <p className="popover-label">Current workspace</p>
+              <button className="workspace-option selected"><span className="avatar avatar-saffron">AS</span><span><strong>DIID · MoSPI</strong><small>Directorate workspace</small></span><Check size={14} /></button>
+              <button className="workspace-option" onClick={() => { setWorkspaceOpen(false); setToastVisible(true) }}><span className="avatar avatar-navy">NS</span><span><strong>NSO · MoSPI</strong><small>National Statistics Office</small></span></button>
+            </div>
+          )}
+        </div>
+        <nav className="side-nav" aria-label="Primary navigation" onClick={() => setSidebarOpen(false)}>
+          <p className="nav-label">Workspace</p>
+          <NavItem to="/" icon={<Home size={17} />} label="Overview" end />
+          <NavItem to="/learning" icon={<BookOpen size={17} />} label="My learning" />
+          <NavItem to="/skills" icon={<LayoutGrid size={17} />} label="Skill intelligence" />
+          <NavItem to="/assessment" icon={<Sparkles size={17} />} label="Assessment engine" />
+          <NavItem to="/reports" icon={<FileBarChart size={17} />} label="Reports" />
+          <p className="nav-label nav-label-spaced">Administration</p>
+          <NavItem to="/directory" icon={<Users size={17} />} label="Officer directory" />
+          <NavItem to="/settings" icon={<Settings size={17} />} label="Settings" />
+        </nav>
+        <div className="sidebar-footer">
+          <button className="help-link" onClick={() => setHelpOpen(true)}><CircleHelp size={17} /><span>Help &amp; guidance</span></button>
+          <div className="version"><span className="status-dot"></span>Prototype v0.1 · NIC hosted</div>
+        </div>
+      </aside>
 
-function NavItem({ to, icon, label, end = false }: { to: string; icon: React.ReactNode; label: string; end?: boolean }) {
-  return <NavLink to={to} end={end} className="nav-item">{icon}<span>{label}</span>{label === 'My learning' && <span className="nav-count">4</span>}</NavLink>
-}
-
-const mockOfficers = [
-  { initials: 'RK', name: 'Rakesh Kumar', designation: 'Deputy Director', department: 'National Statistical Office', competency: '81%', status: 'On track' },
-  { initials: 'PM', name: 'Priya Menon', designation: 'Senior Statistical Officer', department: 'DIID', competency: '74%', status: 'Learning active' },
-  { initials: 'SV', name: 'Sanjay Verma', designation: 'Statistical Officer', department: 'Social Statistics Division', competency: '63%', status: 'Needs review' },
-  { initials: 'NF', name: 'Nandita Fernandes', designation: 'Assistant Director', department: 'Economic Statistics Division', competency: '88%', status: 'On track' },
-]
-
-function OfficerDirectory() {
-  const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const filteredOfficers = mockOfficers.filter((officer) => `${officer.name} ${officer.department} ${officer.designation}`.toLowerCase().includes(query.toLowerCase()) && (statusFilter === 'all' || officer.status === statusFilter))
-  return <div className="page-container admin-page"><div className="admin-heading"><div><p className="eyebrow">Administration · Capability oversight</p><h1>Officer directory</h1><p className="heading-copy">View officers in your administrative scope and their latest competency status.</p></div><span className="directory-count">{filteredOfficers.length} of {mockOfficers.length} officers shown</span></div><section className="panel directory-toolbar"><div className="directory-search"><Search size={16} /><input aria-label="Search officers" placeholder="Search by name, department or designation" value={query} onChange={(event) => setQuery(event.target.value)} /></div><select className="text-input directory-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status"><option value="all">All competency statuses</option><option>On track</option><option>Learning active</option><option>Needs review</option></select></section><section className="panel directory-table-panel"><div className="admin-table-header"><div><p className="eyebrow">Current roster</p><h2>Officers and competency status</h2></div><span className="badge badge-grey">Mock directory data</span></div><div className="directory-table"><div className="directory-row directory-row-header"><span>Officer</span><span>Designation</span><span>Department</span><span>Competency</span><span>Status</span></div>{filteredOfficers.map((officer) => <div className="directory-row" key={officer.name}><div className="officer-name"><span className="avatar avatar-saffron">{officer.initials}</span><strong>{officer.name}</strong></div><span>{officer.designation}</span><span>{officer.department}</span><strong>{officer.competency}</strong><span className={`directory-status ${officer.status === 'Needs review' ? 'review' : officer.status === 'Learning active' ? 'active' : ''}`}>{officer.status}</span></div>)}{filteredOfficers.length === 0 && <div className="admin-empty"><Users size={19} /><strong>No officers match this search</strong><span>Try a different name, department or designation.</span></div>}</div></section></div>
-}
-
-function PlatformSettings() {
-  const [saved, setSaved] = useState(false)
-  const [emailAlerts, setEmailAlerts] = useState(true)
-  const [weeklyDigest, setWeeklyDigest] = useState(true)
-  return <div className="page-container admin-page"><div className="admin-heading"><div><p className="eyebrow">Administration · Workspace preferences</p><h1>Settings</h1><p className="heading-copy">Manage notification preferences and workspace defaults for your official-statistics learning account.</p></div>{saved && <span className="settings-saved"><Check size={14} /> Changes saved</span>}</div><div className="settings-layout"><section className="panel settings-panel"><div className="admin-table-header"><div><p className="eyebrow">Notifications</p><h2>Learning updates</h2></div><Bell size={19} className="settings-icon" /></div><SettingToggle title="Learning reminders" description="Receive reminders for courses and assessments approaching their due date." checked={emailAlerts} onChange={() => setEmailAlerts(!emailAlerts)} /><SettingToggle title="Weekly capability digest" description="Get a weekly summary of progress, completed learning and priority skill gaps." checked={weeklyDigest} onChange={() => setWeeklyDigest(!weeklyDigest)} /><div className="settings-divider"></div><div className="admin-table-header"><div><p className="eyebrow">Workspace defaults</p><h2>Learning preferences</h2></div></div><label className="settings-field"><span>Preferred learning language</span><select className="text-input" defaultValue="english"><option value="english">English</option><option value="hindi">Hindi</option></select></label><label className="settings-field"><span>Default reporting period</span><select className="text-input" defaultValue="fy"><option value="fy">Financial year 2026–27</option><option value="quarter">Current quarter</option></select></label><div className="settings-actions"><span>Last updated: 10 September 2026</span><button className="button button-primary" onClick={() => setSaved(true)}>Save preferences <Check size={15} /></button></div></section><aside className="panel settings-aside"><div className="analysis-aside-icon"><ShieldCheck size={19} /></div><h2>Account and access</h2><p>Your account is managed through the official government workspace. Contact your department administrator to update role or access scope.</p><div className="settings-account"><span className="avatar avatar-navy">AS</span><div><strong>Dr. Ananya Sharma</strong><span>Senior Statistical Officer</span><span>DIID · MoSPI</span></div></div><button className="button button-secondary">View access details <ChevronRight size={14} /></button></aside></div></div>
-}
-
-function SettingToggle({ title, description, checked, onChange }: { title: string; description: string; checked: boolean; onChange: () => void }) { return <div className="setting-toggle"><div><strong>{title}</strong><p>{description}</p></div><button type="button" className={`toggle ${checked ? 'checked' : ''}`} aria-pressed={checked} aria-label={`${title}: ${checked ? 'on' : 'off'}`} onClick={onChange}><span></span></button></div> }
-
-function AccessPrivacyDialog({ onClose }: { onClose: () => void }) { return <div className="modal-backdrop" onClick={onClose}><div className="modal access-dialog" role="dialog" aria-modal="true" aria-labelledby="access-dialog-title" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Account settings</p><h2 id="access-dialog-title">Access and privacy</h2></div><button className="icon-button" aria-label="Close access and privacy" onClick={onClose}><X size={18} /></button></div><p className="modal-copy">Review how your STARTAFORGE workspace is accessed and how your learning information is used.</p><div className="access-status"><ShieldCheck size={18} /><div><strong>Government workspace access</strong><span>Authenticated through the MoSPI departmental workspace.</span></div></div><div className="access-detail"><span>Workspace</span><strong>DIID · MoSPI</strong></div><div className="access-detail"><span>Role scope</span><strong>Senior Statistical Officer</strong></div><div className="access-detail"><span>Data visibility</span><strong>Personal learning record and assigned programmes</strong></div><div className="access-note"><ShieldCheck size={14} /><span>Your competency information is visible to you and authorised departmental learning administrators.</span></div><div className="modal-actions"><button className="button button-primary" onClick={onClose}>Done</button></div></div></div> }
-
-function LearnerDashboard({ onOpenModal }: { onOpenModal: () => void }) {
-  return (
-    <div className="page-container learner-dashboard">
-      <div className="page-heading learner-heading">
-        <div><p className="eyebrow">Learner dashboard · Thursday, 10 September 2026</p><h1>Good morning, Ananya</h1><p className="heading-copy">Senior Statistical Officer · Directorate of Industrial and Internal Trade</p></div>
-        <button className="button button-primary" onClick={onOpenModal}><BookOpen size={16} /> Browse learning catalogue</button>
-      </div>
-
-      <section className="learner-summary">
-        <div className="summary-intro"><div className="summary-icon"><Award size={20} /></div><div><p className="eyebrow">Annual capability review · FY 2026–27</p><h2>Your capability journey</h2><p>Based on your latest self-assessment, supervisor inputs and completed learning activities.</p></div></div>
-        <div className="summary-score"><span className="summary-score-label">Overall competency</span><strong>74<span>/100</span></strong><span className="score-change"><Activity size={12} /> 8 points since April</span></div>
-      </section>
-
-      <section className="learner-metrics" aria-label="Learner summary metrics">
-        <MetricCard label="Overall competency" value="74%" detail="Above role benchmark · 68%" tone="green" icon={<Target size={18} />} />
-        <MetricCard label="Priority skill gaps" value="03" detail="2 high-priority areas" tone="amber" icon={<Activity size={18} />} />
-        <MetricCard label="Learning hours" value="31.5" detail="of 40 hours planned" tone="blue" icon={<Clock3 size={18} />} />
-        <MetricCard label="Courses completed" value="07" detail="This financial year" tone="slate" icon={<ShieldCheck size={18} />} />
-      </section>
-
-      <div className="dashboard-columns">
-        <section className="panel competency-panel">
-          <div className="panel-header"><div><p className="eyebrow">Role-aligned capability framework</p><h2>Competency breakdown</h2></div><button className="button button-secondary">View framework <ChevronRight size={14} /></button></div>
-          <p className="panel-description">Your proficiency across the competencies mapped to Senior Statistical Officer responsibilities.</p>
-          <div className="competency-list">
-            <CompetencyRow label="Survey Design" value="86%" level="Advanced" tone="green" benchmark="Role benchmark 78%" />
-            <CompetencyRow label="Sampling" value="79%" level="Proficient" tone="green" benchmark="Role benchmark 75%" />
-            <CompetencyRow label="Data Analysis" value="74%" level="Proficient" tone="green" benchmark="Role benchmark 72%" />
-            <CompetencyRow label="Python" value="58%" level="Developing" tone="amber" benchmark="Role benchmark 65%" />
-            <CompetencyRow label="AI / ML" value="42%" level="Foundational" tone="amber" benchmark="Role benchmark 55%" />
-            <CompetencyRow label="GIS" value="38%" level="Foundational" tone="amber" benchmark="Role benchmark 48%" />
-            <CompetencyRow label="Cybersecurity" value="91%" level="Advanced" tone="green" benchmark="Role benchmark 80%" />
+      <main className="main-area">
+        <header className="topbar">
+          <button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setSidebarOpen(!sidebarOpen)}><Menu size={20} /></button>
+          <div className="breadcrumb"><span>Workspace</span><ChevronRight size={14} /><strong>{breadcrumbLabel}</strong></div>
+          <div className="topbar-actions">
+            <div className="topbar-search">
+              <Search size={17} />
+              <input
+                aria-label="Search"
+                placeholder="Search learning, skills or reports"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={(event) => { if (event.key === 'Enter') runSearch() }}
+              />
+              <button className="search-submit" aria-label="Run search" onClick={runSearch}><ChevronRight size={14} /></button>
+              {trimmedQuery && (
+                <div className="search-results">
+                  <p>{searchResults.length ? 'Search results' : 'No results'}</p>
+                  {searchResults.length === 0 && (
+                    <div className="admin-empty">
+                      <span>Nothing matches "{trimmedQuery}". Try a course, skill or officer.</span>
+                    </div>
+                  )}
+                  {searchResults.map((result) => (
+                    <button key={`${result.label}:${result.route}`} onClick={() => { setSearchQuery(''); navigate(result.route) }}>
+                      {searchIcon(result.route)}
+                      <span><strong>{result.label}</strong><small>{result.sublabel}</small></span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="popover-wrap">
+              <button className="icon-button notification-button" aria-label="Notifications" aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false) }}>
+                <Bell size={18} /><span className="notification-dot"></span>
+              </button>
+              {notificationsOpen && (
+                <div className="popover notification-popover">
+                  <div className="popover-heading"><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)}>Mark read</button></div>
+                  <div className="notification-item"><span className="notification-icon"><Activity size={14} /></span><span><strong>Competency profile updated</strong><small>Today · Your latest assessment is now reflected.</small></span></div>
+                  <div className="notification-item"><span className="notification-icon amber"><Clock3 size={14} /></span><span><strong>Learning reminder</strong><small>Python for Official Statistics is due this month.</small></span></div>
+                </div>
+              )}
+            </div>
+            <div className="popover-wrap">
+              <button className="topbar-profile" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false) }}>
+                <span className="avatar avatar-navy">AS</span><ChevronDown size={15} />
+              </button>
+              {profileOpen && (
+                <div className="popover profile-popover">
+                  <div className="profile-popover-header"><span className="avatar avatar-navy">AS</span><span><strong>Dr. Ananya Sharma</strong><small>Senior Statistical Officer</small></span></div>
+                  <button onClick={() => { setProfileOpen(false); navigate('/settings') }}><Settings size={14} /> Account settings</button>
+                  <button onClick={() => setProfileOpen(false)}><ShieldCheck size={14} /> Access and privacy</button>
+                  <button className="profile-signout" onClick={() => setProfileOpen(false)}>Sign out</button>
+                </div>
+              )}
+            </div>
           </div>
-        </section>
+        </header>
 
-        <section className="panel assessment-panel">
-          <div className="panel-header"><div><p className="eyebrow">Latest checkpoint</p><h2>Recent assessment</h2></div><button className="icon-button" aria-label="More assessment options"><MoreHorizontal size={19} /></button></div>
-          <div className="assessment-score"><div className="assessment-ring"><strong>82</strong><span>/ 100</span></div><div><strong>National Sample Survey<br />Methods — Module 2</strong><span>Completed 28 Aug 2026</span><span className="badge badge-green">Passed</span></div></div>
-          <div className="assessment-stats"><div><strong>14 / 18</strong><span>Questions correct</span></div><div><strong>38 min</strong><span>Time taken</span></div><div><strong>+6</strong><span>Since last attempt</span></div></div>
-          <button className="button button-ghost assessment-link">Review assessment report <ChevronRight size={15} /></button>
-        </section>
-      </div>
+        <Routes>
+          <Route path="/skills" element={<CompetencyAnalysis />} />
+          <Route path="/learning" element={<LearningPath />} />
+          <Route path="/assessment" element={<AssessmentEngine />} />
+          <Route path="/directory" element={<OfficerDirectory />} />
+          <Route path="/settings" element={<PlatformSettings />} />
+          <Route path="*" element={<LearnerDashboard onOpenModal={() => setModalOpen(true)} />} />
+        </Routes>
+      </main>
 
-      <div className="dashboard-columns lower-columns">
-        <section className="panel course-panel"><div className="panel-header"><div><p className="eyebrow">Personalised for your role</p><h2>AI-recommended courses</h2></div><button className="button button-secondary">View all <ChevronRight size={14} /></button></div><div className="course-list"><CourseCard title="Python for Official Statistics" provider="National Statistical Training Academy" meta="6 hours · Intermediate" tag="Closes skill gap" icon={<Activity size={17} />} /><CourseCard title="Introduction to Geospatial Data for Surveys" provider="UN Statistics Division · eLearning" meta="4 hours · Foundation" tag="Build GIS capability" icon={<LayoutGrid size={17} />} /><CourseCard title="Responsible AI for Public Data Systems" provider="Capacity Building Programme" meta="3 hours · Foundation" tag="Emerging priority" icon={<Sparkles size={17} />} /></div></section>
-        <section className="panel progress-panel"><div className="panel-header"><div><p className="eyebrow">Your active plan</p><h2>Current learning progress</h2></div><button className="icon-button" aria-label="More learning options"><MoreHorizontal size={19} /></button></div><div className="current-course"><div className="course-thumbnail"><PlayCircle size={23} /></div><div><strong>Advanced Data Analysis with Python</strong><span>Module 3 of 6 · Last opened today</span></div></div><div className="progress-heading"><strong>46% complete</strong><span>2h 10m remaining</span></div><div className="progress-track large-progress"><div className="progress-fill blue" style={{ width: '46%' }}></div></div><div className="next-module"><span>Next module</span><strong>Working with official survey microdata</strong><button className="text-button">Continue <ChevronRight size={14} /></button></div></section>
-      </div>
-
-      <section className="recommendation-panel"><div className="recommendation-icon"><Sparkles size={20} /></div><div className="recommendation-copy"><p className="eyebrow">Recommendation rationale</p><h2>Why this course is recommended</h2><p><strong>Python for Official Statistics</strong> is recommended because your role profile shows a 7-point gap against the Python benchmark, and your current learning plan includes analysis of large-scale enterprise survey datasets. Completing this course is expected to improve your ability to automate data validation and reproducible tabulation workflows.</p><div className="reason-tags"><span><Check size={13} /> Matches role framework</span><span><Check size={13} /> Addresses priority gap</span><span><Check size={13} /> Supports current assignment</span></div></div><button className="button button-primary recommendation-action">View course <ChevronRight size={15} /></button></section>
+      {toastVisible && (
+        <div className="toast" role="status">
+          <div className="toast-icon"><Check size={15} /></div>
+          <div><strong>Learning record synced</strong><span>Your competency profile is up to date.</span></div>
+          <button className="toast-close" aria-label="Dismiss notification" onClick={() => setToastVisible(false)}><X size={15} /></button>
+        </div>
+      )}
+      {modalOpen && <Modal onClose={() => setModalOpen(false)} />}
+      {helpOpen && (
+        <div className="help-backdrop" onClick={() => setHelpOpen(false)}>
+          <aside className="help-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="help-drawer-header">
+              <div><p className="eyebrow">Support centre</p><h2>Help &amp; guidance</h2></div>
+              <button className="icon-button" aria-label="Close help" onClick={() => setHelpOpen(false)}><X size={18} /></button>
+            </div>
+            <p>Find guidance for using SkillSetu and managing your learning record.</p>
+            <button className="help-topic"><CircleHelp size={16} /><span><strong>Using your dashboard</strong><small>Understand competency scores and progress.</small></span><ChevronRight size={15} /></button>
+            <button className="help-topic"><BookOpen size={16} /><span><strong>Learning and assessments</strong><small>Get help with courses and knowledge checks.</small></span><ChevronRight size={15} /></button>
+            <button className="help-topic"><Users size={16} /><span><strong>Contact your administrator</strong><small>Reach your departmental learning coordinator.</small></span><ChevronRight size={15} /></button>
+            <div className="help-contact"><strong>Need more support?</strong><span>Submit a request through your departmental helpdesk.</span></div>
+          </aside>
+        </div>
+      )}
+      {accessOpen && <AccessPrivacyDialog onClose={() => setAccessOpen(false)} />}
     </div>
   )
 }
-
-function LearningPath() {
-  const [source, setSource] = useState<'all' | 'igot' | 'nssta'>('all')
-  const [startedCourse, setStartedCourse] = useState('')
-  const recommendations = [
-    { source: 'igot', title: 'Python for Official Statistics', provider: 'iGOT Karmayogi', duration: '6 hours', difficulty: 'Intermediate', skills: 'Python · Data validation · Reproducible tabulation', reason: 'Closes your 28-point Python gap and supports the enterprise survey data validation work in your current assignment.', progress: 46, action: 'Continue learning', icon: <Activity size={18} /> },
-    { source: 'igot', title: 'Geospatial Data for Evidence-Based Policy', provider: 'iGOT Karmayogi', duration: '4 hours', difficulty: 'Foundation', skills: 'GIS · Spatial analysis · Data visualisation', reason: 'Builds foundational GIS capability identified as a priority in your competency assessment.', progress: 0, action: 'Start course', icon: <LayoutGrid size={18} /> },
-    { source: 'nssta', title: 'Advanced Sampling and Estimation Methods', provider: 'NSSTA Recommended Training Programme', duration: '5 days', difficulty: 'Advanced', skills: 'Sampling · Variance estimation · Non-response adjustment', reason: 'Strengthens your existing sampling practice for the upcoming large-scale household survey programme.', progress: 20, action: 'Resume programme', icon: <Target size={18} /> },
-    { source: 'nssta', title: 'Responsible AI in Official Statistics', provider: 'NSSTA Recommended Training Programme', duration: '3 days', difficulty: 'Foundation', skills: 'AI / ML · Data governance · Statistical ethics', reason: 'Introduces practical safeguards for evaluating machine learning use in estimation and anomaly detection.', progress: 0, action: 'View programme', icon: <Sparkles size={18} /> },
-  ]
-  const visibleRecommendations = source === 'all' ? recommendations : recommendations.filter((course) => course.source === source)
-  return <div className="page-container learning-page"><div className="learning-heading"><div><p className="eyebrow">My learning · FY 2026–27</p><h1>Personalized learning path</h1><p className="heading-copy">A role-aligned sequence of learning from your current competency profile to your next professional target.</p></div><div className="path-status"><span className="status-dot"></span>Path updated today</div></div><section className="path-overview panel"><div className="path-overview-copy"><p className="eyebrow">Your progression plan</p><h2>From capable practitioner to advanced statistical leader</h2><p>Based on your role as Senior Statistical Officer, competency analysis and the NSSTA recommended training framework.</p></div><div className="path-stats"><div><strong>67%</strong><span>Current competency</span></div><ChevronRight size={18} /><div><strong>82%</strong><span>Target competency</span></div><div className="path-stat-meta"><span>Estimated pathway</span><strong>18–24 hours</strong></div></div></section><section className="progression-panel panel"><div className="panel-header"><div><p className="eyebrow">Competency progression</p><h2>Current state to target state</h2></div><span className="badge badge-blue">3 milestones</span></div><div className="progression-rail"><div className="rail-line"><div className="rail-complete"></div></div><span className="progression-value value-first">67%</span><span className="progression-value value-second">74%</span><span className="progression-value value-target">82%</span><ProgressionStep number="01" label="Current profile" detail="Developing in Python, AI / ML and GIS" tone="current" /><ProgressionStep number="02" label="Priority foundation" detail="Complete recommended foundation courses" tone="middle" /><ProgressionStep number="03" label="Role target" detail="Advanced statistical practice" tone="target" /></div></section><div className="learning-content-grid"><section className="panel recommendations-panel"><div className="panel-header"><div><p className="eyebrow">Curated for your role</p><h2>Recommended learning</h2></div><div className="source-tabs" role="tablist" aria-label="Learning sources"><button className={source === 'all' ? 'active' : ''} onClick={() => setSource('all')}>All recommendations</button><button className={source === 'igot' ? 'active' : ''} onClick={() => setSource('igot')}>iGOT Karmayogi</button><button className={source === 'nssta' ? 'active' : ''} onClick={() => setSource('nssta')}>NSSTA programme</button></div></div><div className="recommendation-list">{visibleRecommendations.map((course) => <LearningRecommendation key={course.title} {...course} started={startedCourse === course.title} onStart={() => setStartedCourse(course.title)} />)}</div></section><aside className="panel pathway-aside"><div className="panel-header"><div><p className="eyebrow">Pathway summary</p><h2>Your next steps</h2></div><BookOpen size={19} className="pathway-icon" /></div><div className="pathway-step done"><span><Check size={13} /></span><div><strong>Competency profile analysed</strong><small>Completed today</small></div></div><div className="pathway-step active"><span>2</span><div><strong>Close priority skill gaps</strong><small>2 courses recommended</small></div></div><div className="pathway-step"><span>3</span><div><strong>Reassess competency</strong><small>After 30 days of learning</small></div></div><div className="pathway-note"><Sparkles size={15} /><p>Recommendations are refreshed when your assessment results or role responsibilities change.</p></div></aside></div></div>
-}
-
-function ProgressionStep({ number, label, detail, tone }: { number: string; label: string; detail: string; tone: string }) { return <div className={`progression-step ${tone}`}><span className="progression-number">{number}</span><div><strong>{label}</strong><span>{detail}</span></div></div> }
-function LearningRecommendation({ source, title, provider, duration, difficulty, skills, reason, progress, action, icon, started, onStart }: { source: string; title: string; provider: string; duration: string; difficulty: string; skills: string; reason: string; progress: number; action: string; icon: React.ReactNode; started: boolean; onStart: () => void }) { return <article className="learning-recommendation"><div className="learning-card-top"><div className={`learning-course-icon ${source === 'nssta' ? 'nssta' : ''}`}>{icon}</div><div className="learning-card-title"><span className="course-source">{provider}</span><h3>{title}</h3></div><span className="badge badge-grey">{difficulty}</span></div><div className="learning-meta"><span><Clock3 size={13} /> {duration}</span><span><Target size={13} /> {skills}</span></div><div className="learning-reason"><span>Why this is recommended</span><p>{reason}</p></div><div className="learning-card-footer"><div className="learning-progress-copy"><span>Current progress</span><strong>{started && progress === 0 ? 'Just started' : `${progress}% complete`}</strong></div><div className="progress-track"><div className={`progress-fill ${source === 'nssta' ? 'amber' : 'blue'}`} style={{ width: `${started && progress === 0 ? 3 : progress}%` }}></div></div><button className="button button-primary" onClick={onStart}>{started && progress > 0 ? 'Continue learning' : action} <ChevronRight size={14} /></button></div></article> }
-
-const assessmentStages = ['Reading material', 'Extracting concepts', 'Generating questions', 'Validating questions']
-const mockQuestions = [
-  { question: 'Which measure is most appropriate for assessing the variability of an estimator across repeated samples?', options: ['Standard error', 'Arithmetic mean', 'Median absolute deviation of the population', 'Response rate'], answer: 'Standard error', explanation: 'The standard error measures the expected variability of an estimator across repeated samples and is used to construct confidence intervals.', difficulty: 'Intermediate', topic: 'Sampling and estimation' },
-  { question: 'In an official statistical release, what is the primary purpose of a metadata statement?', options: ['To replace the published estimates', 'To describe concepts, methods, quality and limitations', 'To rank the reporting units', 'To disclose individual records'], answer: 'To describe concepts, methods, quality and limitations', explanation: 'Metadata makes official statistics interpretable and transparent by documenting definitions, methods, quality dimensions and known limitations.', difficulty: 'Foundation', topic: 'Statistical quality and metadata' },
-  { question: 'Which practice best supports reproducible tabulation of an enterprise survey?', options: ['Manual edits in a spreadsheet', 'Saving only the final chart', 'Version-controlled scripts with documented inputs', 'Sharing a screenshot of the output'], answer: 'Version-controlled scripts with documented inputs', explanation: 'Documented, version-controlled scripts make transformations auditable and allow another analyst to reproduce the published tables.', difficulty: 'Advanced', topic: 'Data analysis and governance' },
-  { question: 'A high non-response rate most directly threatens which property of a survey estimate?', options: ['Timeliness only', 'Representativeness and potential non-response bias', 'File compression', 'Geographic coding'], answer: 'Representativeness and potential non-response bias', explanation: 'When respondents differ systematically from non-respondents, the resulting estimates may be biased even when the sample design is otherwise sound.', difficulty: 'Intermediate', topic: 'Survey design' },
-]
-
-function AssessmentEngine() {
-  const [fileName, setFileName] = useState('')
-  const [questionCount, setQuestionCount] = useState('10')
-  const [difficulty, setDifficulty] = useState('Mixed difficulty')
-  const [quizType, setQuizType] = useState('MCQ · Single correct answer')
-  const [status, setStatus] = useState<'setup' | 'generating' | 'generated'>('setup')
-  const [stage, setStage] = useState(0)
-  const [started, setStarted] = useState(false)
-
-  useEffect(() => {
-    if (status !== 'generating') return
-    const timer = window.setInterval(() => setStage((current) => Math.min(current + 1, assessmentStages.length - 1)), 900)
-    const complete = window.setTimeout(() => setStatus('generated'), 3900)
-    return () => { window.clearInterval(timer); window.clearTimeout(complete) }
-  }, [status])
-
-  const generateAssessment = () => { setStage(0); setStarted(false); setStatus('generating') }
-  if (status === 'generating') return <AssessmentProcessing stage={stage} fileName={fileName} />
-  if (status === 'generated') return <GeneratedAssessment fileName={fileName} questionCount={questionCount} difficulty={difficulty} onStart={() => setStarted(true)} started={started} onBack={() => setStatus('setup')} />
-
-  return <div className="page-container assessment-page"><div className="assessment-heading"><div><p className="eyebrow">Learning tools · AI assessment engine</p><h1>Generate an assessment</h1><p className="heading-copy">Turn approved training material into a structured knowledge check for official-statistics teams.</p></div><span className="privacy-note"><ShieldCheck size={14} /> Mock generation · no files uploaded</span></div><div className="assessment-layout"><section className="panel assessment-setup-panel"><div className="panel-header"><div><p className="eyebrow">Step 1 of 2</p><h2>Assessment setup</h2></div><span className="form-required">All fields required</span></div><p className="panel-description">Upload a reference document, choose the assessment format, and generate a question set for review.</p><label className="upload-zone" htmlFor="assessment-file"><input id="assessment-file" type="file" accept=".pdf,.ppt,.pptx,.doc,.docx" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? '')} /><span className="upload-icon"><UploadCloud size={23} /></span><strong>{fileName || 'Upload reference material'}</strong><span>{fileName ? 'Document ready for mock processing' : 'PDF, PowerPoint or Word document · max 25 MB'}</span><small>PDF, PowerPoint or Word document</small></label><div className="upload-sample">or <button type="button" className="text-button" onClick={() => setFileName('NSSTA_Sampling_Methods_Module_2.pdf')}>use sample training material</button></div><div className="selected-file">{fileName ? <><FileText size={16} /><div><strong>{fileName}</strong><span>Ready · 2.4 MB · Training material</span></div><button className="icon-button" aria-label="Remove document" onClick={() => setFileName('')}><X size={15} /></button></> : <><FileText size={16} /><span>No material selected</span></>}</div><div className="assessment-fields"><FormField label="Number of questions"><select className="text-input" value={questionCount} onChange={(event) => setQuestionCount(event.target.value)}><option>5</option><option>10</option><option>15</option><option>20</option></select></FormField><FormField label="Difficulty"><select className="text-input" value={difficulty} onChange={(event) => setDifficulty(event.target.value)}><option>Foundation</option><option>Intermediate</option><option>Advanced</option><option>Mixed difficulty</option></select></FormField><FormField label="Question type" wide><select className="text-input" value={quizType} onChange={(event) => setQuizType(event.target.value)}><option>MCQ · Single correct answer</option><option>Quiz · Multiple correct answers</option><option>Knowledge check · Mixed format</option></select></FormField></div><div className="form-actions"><span><span className={`status-dot ${fileName ? '' : 'status-dot-muted'}`}></span>{fileName ? 'Material ready' : 'Upload material to continue'}</span><button className="button button-primary" disabled={!fileName} onClick={generateAssessment}>Generate assessment <Sparkles size={16} /></button></div></section><aside className="panel assessment-help-panel"><div className="analysis-aside-icon"><Sparkles size={19} /></div><h2>How it works</h2><p>The engine creates a draft question set for review before it is assigned to learners.</p><AssessmentHelp number="01" title="Read and understand" detail="Identifies the document's learning objectives and key sections." /><AssessmentHelp number="02" title="Create and validate" detail="Generates questions, checks answer quality and removes ambiguity." /><AssessmentHelp number="03" title="Review before use" detail="You remain in control of the final assessment shared with officers." /><div className="assessment-help-footer"><ShieldCheck size={15} /><span>Generated content should be verified by a subject matter expert.</span></div></aside></div></div>
-}
-
-function AssessmentHelp({ number, title, detail }: { number: string; title: string; detail: string }) { return <div className="assessment-help-item"><span>{number}</span><div><strong>{title}</strong><p>{detail}</p></div></div> }
-function AssessmentProcessing({ stage, fileName }: { stage: number; fileName: string }) { return <div className="page-container assessment-processing-page"><section className="panel assessment-processing-card"><div className="processing-orbit"><Sparkles size={25} /></div><p className="eyebrow">AI assessment engine</p><h1>Preparing your question set</h1><p className="processing-copy">We are reading <strong>{fileName}</strong> and creating a balanced assessment for your review.</p><div className="processing-stages">{assessmentStages.map((label, index) => <div className={`processing-stage ${index < stage ? 'complete' : ''} ${index === stage ? 'active' : ''}`} key={label}><span className="stage-marker">{index < stage ? <Check size={13} /> : index === stage ? <span className="stage-pulse"></span> : index + 1}</span><span>{label}</span>{index === stage && <small>In progress</small>}{index < stage && <small>Complete</small>}</div>)}</div><div className="processing-progress"><div style={{ width: `${((stage + 1) / assessmentStages.length) * 100}%` }}></div></div><span className="processing-footnote">Questions are mocked for this frontend prototype</span></section></div> }
-function GeneratedAssessment({ fileName, questionCount, difficulty, onStart, started, onBack }: { fileName: string; questionCount: string; difficulty: string; onStart: () => void; started: boolean; onBack: () => void }) { return <div className="page-container generated-assessment-page"><div className="generated-heading"><div><p className="eyebrow">AI assessment engine · Draft ready for review</p><h1>Generated knowledge check</h1><p className="heading-copy">{fileName} · {questionCount} questions requested · {difficulty}</p></div><div className="generated-actions"><button className="button button-secondary" onClick={onBack}>Edit setup</button><button className="button button-primary" onClick={onStart}>{started ? 'Assessment ready to begin' : 'Start assessment'} <PlayCircle size={16} /></button></div></div><section className="generated-summary"><div><span className="eyebrow">Assessment quality</span><strong>Review complete</strong><span>{mockQuestions.length} preview questions validated</span></div><div><span className="eyebrow">Format</span><strong>Single-answer MCQ</strong><span>Balanced topic coverage</span></div><div><span className="eyebrow">Estimated time</span><strong>6–8 minutes</strong><span>For the preview set</span></div><div className="generated-confidence"><span className="eyebrow">AI confidence</span><strong>94%</strong><span>Subject review recommended</span></div></section>{started && <div className="assessment-started"><Check size={15} /> Assessment session prepared. Your first question will appear when the learning session begins.</div>}<div className="generated-question-list">{mockQuestions.map((question, index) => <QuestionCard key={question.question} index={index + 1} {...question} />)}</div></div> }
-function QuestionCard({ index, question, options, answer, explanation, difficulty, topic }: { index: number; question: string; options: string[]; answer: string; explanation: string; difficulty: string; topic: string }) { return <article className="question-card panel"><div className="question-header"><span className="question-number">Q{String(index).padStart(2, '0')}</span><span className="badge badge-grey">{difficulty}</span><span className="question-topic">{topic}</span></div><h2>{question}</h2><div className="question-options">{options.map((option, optionIndex) => <div className={`question-option ${option === answer ? 'correct' : ''}`} key={option}><span>{String.fromCharCode(65 + optionIndex)}</span><strong>{option}</strong>{option === answer && <Check size={15} />}</div>)}</div><div className="question-explanation"><strong>Correct answer: {answer}</strong><p>{explanation}</p></div></article> }
-
-const analysisStages = ['Profile analysis', 'Competency mapping', 'Role framework matching', 'Gap identification', 'Learning recommendation generation']
-
-function CompetencyAnalysis() {
-  const [form, setForm] = useState({ designation: 'Senior Statistical Officer', department: 'Directorate of Industrial and Internal Trade', experience: '8–12 years', responsibilities: 'Design and review enterprise surveys, validate official estimates, and guide statistical data quality processes.', education: 'M.Sc. Statistics', training: 'National Sample Survey Methods; Official Statistics and Data Quality' })
-  const [status, setStatus] = useState<'form' | 'processing' | 'report'>('form')
-  const [stage, setStage] = useState(0)
-
-  useEffect(() => {
-    if (status !== 'processing') return
-    const timer = window.setInterval(() => setStage((current) => Math.min(current + 1, analysisStages.length - 1)), 850)
-    const complete = window.setTimeout(() => setStatus('report'), 4800)
-    return () => { window.clearInterval(timer); window.clearTimeout(complete) }
-  }, [status])
-
-  const updateField = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }))
-  if (status === 'processing') return <ProcessingState stage={stage} />
-  if (status === 'report') return <SkillGapReport designation={form.designation} onReanalyse={() => { setStage(0); setStatus('form') }} />
-
-  return <div className="page-container analysis-page"><div className="analysis-heading"><div><p className="eyebrow">Skill intelligence · AI-assisted analysis</p><h1>Analyse your competencies</h1><p className="heading-copy">Create a role-aligned capability profile using your current responsibilities, experience and learning record.</p></div><span className="privacy-note"><ShieldCheck size={14} /> Mock analysis · no personal data stored</span></div><div className="analysis-layout"><section className="panel analysis-form-panel"><div className="panel-header"><div><p className="eyebrow">Step 1 of 2</p><h2>Tell us about your role</h2></div><span className="form-required">* Required fields</span></div><p className="panel-description">The more context you provide, the more relevant the competency mapping will be for your official-statistics responsibilities.</p><div className="form-grid"><FormField label="Designation" required><input className="text-input" value={form.designation} onChange={(event) => updateField('designation', event.target.value)} /></FormField><FormField label="Department / organisation" required><input className="text-input" value={form.department} onChange={(event) => updateField('department', event.target.value)} /></FormField><FormField label="Years of experience" required><select className="text-input" value={form.experience} onChange={(event) => updateField('experience', event.target.value)}><option>0–3 years</option><option>4–7 years</option><option>8–12 years</option><option>13+ years</option></select></FormField><FormField label="Educational background" required><input className="text-input" value={form.education} onChange={(event) => updateField('education', event.target.value)} /></FormField><FormField label="Key responsibilities" wide><textarea className="text-input form-textarea" value={form.responsibilities} onChange={(event) => updateField('responsibilities', event.target.value)} /></FormField><FormField label="Previous training and certifications" wide><textarea className="text-input form-textarea" value={form.training} onChange={(event) => updateField('training', event.target.value)} /></FormField></div><div className="form-actions"><span><span className="status-dot"></span>Ready to analyse</span><button className="button button-primary" onClick={() => { setStage(0); setStatus('processing') }}>Analyze my skills <Sparkles size={16} /></button></div></section><aside className="panel analysis-aside"><div className="analysis-aside-icon"><Sparkles size={19} /></div><h2>What the analysis does</h2><p>We compare your profile with the National Competency Framework for Official Statisticians and your mapped role requirements.</p><div className="analysis-feature"><Check size={14} /><span>Maps responsibilities to core statistical competencies</span></div><div className="analysis-feature"><Check size={14} /><span>Identifies priority gaps against your role level</span></div><div className="analysis-feature"><Check size={14} /><span>Suggests practical, role-relevant learning actions</span></div><div className="analysis-aside-footer"><ShieldCheck size={15} /><span>Results are indicative and should be reviewed with your supervisor.</span></div></aside></div></div>
-}
-
-function FormField({ label, required, wide, children }: { label: string; required?: boolean; wide?: boolean; children: React.ReactNode }) { return <label className={`form-field ${wide ? 'form-field-wide' : ''}`}><span>{label}{required && <b> *</b>}</span>{children}</label> }
-
-function ProcessingState({ stage }: { stage: number }) { return <div className="page-container processing-page"><div className="processing-card panel"><div className="processing-orbit"><Sparkles size={25} /></div><p className="eyebrow">AI competency analysis</p><h1>Building your competency profile</h1><p className="processing-copy">We are comparing your role context with official-statistics competency frameworks. This usually takes a few seconds.</p><div className="processing-stages">{analysisStages.map((label, index) => <div className={`processing-stage ${index < stage ? 'complete' : ''} ${index === stage ? 'active' : ''}`} key={label}><span className="stage-marker">{index < stage ? <Check size={13} /> : index === stage ? <span className="stage-pulse"></span> : index + 1}</span><span>{label}</span>{index === stage && <small>In progress</small>}{index < stage && <small>Complete</small>}</div>)}</div><div className="processing-progress"><div style={{ width: `${((stage + 1) / analysisStages.length) * 100}%` }}></div></div><span className="processing-footnote">Analysis uses mock data for this prototype</span></div></div> }
-
-function SkillGapReport({ designation, onReanalyse }: { designation: string; onReanalyse: () => void }) { return <div className="page-container report-page"><div className="report-heading"><div><p className="eyebrow">AI competency analysis · Report generated just now</p><h1>Skill gap report</h1><p className="heading-copy">Role profile: <strong>{designation}</strong> · National Competency Framework for Official Statisticians</p></div><button className="button button-secondary" onClick={onReanalyse}><Activity size={15} /> Analyse again</button></div><div className="report-top-grid"><section className="panel report-score-panel"><div><p className="eyebrow">Overall competency score</p><strong className="report-score">67<span>/100</span></strong><span className="report-score-status"><span className="status-dot"></span>Moderate alignment with role requirements</span></div><div className="confidence-meter"><div className="confidence-header"><span>AI confidence</span><strong>91%</strong></div><div className="progress-track"><div className="progress-fill green" style={{ width: '91%' }}></div></div><p>Based on 6 profile inputs and 7 mapped competency areas.</p></div></section><RadarChart /></div><section className="panel gap-report-panel"><div className="panel-header"><div><p className="eyebrow">Role requirement comparison</p><h2>Current versus required competency</h2></div><div className="gap-legend"><span><i className="legend-dot blue"></i>Current</span><span><i className="legend-dot amber"></i>Required</span></div></div><div className="gap-table"><div className="gap-table-header"><span>Competency area</span><span>Current</span><span>Required</span><span>Gap</span><span>Priority</span></div><GapRow label="Survey Design" current="78" required="82" priority="Low" tone="green" /><GapRow label="Sampling" current="72" required="80" priority="Medium" tone="amber" /><GapRow label="Data Analysis" current="69" required="78" priority="Medium" tone="amber" /><GapRow label="Python" current="42" required="70" priority="High" tone="red" /><GapRow label="AI / ML for official data" current="31" required="55" priority="High" tone="red" /><GapRow label="GIS and spatial statistics" current="38" required="50" priority="Medium" tone="amber" /><GapRow label="Cybersecurity and data governance" current="83" required="80" priority="Low" tone="green" /></div></section><div className="report-lower-grid"><section className="panel priority-panel"><div className="panel-header"><div><p className="eyebrow">Actionable insights</p><h2>Priority gaps</h2></div></div><PriorityGap title="Python for official statistics" priority="High priority" tone="red" explanation="Your responsibilities mention survey data validation, but your current Python proficiency is 28 points below the required level for this role." action="Start: Python for Official Statistics" /><PriorityGap title="AI / ML applications" priority="High priority" tone="red" explanation="Building foundational knowledge will help you assess the responsible use of machine learning for estimation and anomaly detection." action="Explore: Responsible AI for Public Data" /><PriorityGap title="Sampling methods" priority="Medium priority" tone="amber" explanation="A focused refresher in non-response adjustment and variance estimation would strengthen your current sampling practice." action="Review: Advanced Sampling Methods" /></section><section className="panel report-action-panel"><div className="panel-header"><div><p className="eyebrow">Suggested next step</p><h2>Recommended action</h2></div><Target size={20} className="action-target" /></div><div className="action-highlight"><span>01</span><div><strong>Complete a focused learning sprint</strong><p>Begin with Python for Official Statistics, then retake the competency check in 30 days.</p></div></div><div className="action-details"><div><span>Estimated effort</span><strong>6 learning hours</strong></div><div><span>Expected impact</span><strong>+8 to +12 points</strong></div><div><span>Review with</span><strong>Reporting officer</strong></div></div><button className="button button-primary action-button">Add to my learning plan <BookOpen size={15} /></button></section></div></div> }
-
-function RadarChart() { return <section className="panel radar-panel"><div className="panel-header"><div><p className="eyebrow">Competency profile</p><h2>Capability map</h2></div><span className="badge badge-grey">7 areas analysed</span></div><div className="radar-wrap"><svg viewBox="0 0 280 230" role="img" aria-label="Radar chart showing current competency against required competency"><polygon className="radar-grid" points="140,20 226,61 247,151 194,214 86,214 33,151 54,61" /><polygon className="radar-grid inner" points="140,55 192,80 205,135 172,174 108,174 75,135 88,80" /><polygon className="radar-required" points="140,37 214,71 229,144 183,194 96,194 54,144 68,71" /><polygon className="radar-current" points="140,51 202,84 211,134 179,181 103,181 72,135 86,83" /><line x1="140" y1="20" x2="140" y2="214" /><line x1="33" y1="151" x2="247" y2="151" /><text x="140" y="12">Survey</text><text x="231" y="56">Sampling</text><text x="239" y="168">Analysis</text><text x="184" y="229">Python</text><text x="72" y="229">AI / ML</text><text x="7" y="168">GIS</text><text x="40" y="56">Cyber</text></svg><div className="radar-key"><span><i className="radar-swatch current"></i>Current profile</span><span><i className="radar-swatch required"></i>Role requirement</span></div></div></section> }
-
-function GapRow({ label, current, required, priority, tone }: { label: string; current: string; required: string; priority: string; tone: string }) { return <div className="gap-table-row"><strong>{label}</strong><div className="mini-bar"><i style={{ width: `${current}%` }}></i></div><span>{current}%</span><span>{required}%</span><span className={`priority-badge ${tone}`}>{priority}</span></div> }
-function PriorityGap({ title, priority, tone, explanation, action }: { title: string; priority: string; tone: string; explanation: string; action: string }) { return <article className="priority-gap"><div className={`priority-line ${tone}`}></div><div><div className="priority-title"><strong>{title}</strong><span className={`priority-badge ${tone}`}>{priority}</span></div><p>{explanation}</p><button className="text-button">{action} <ChevronRight size={13} /></button></div></article> }
-
-function MetricCard({ label, value, detail, tone, icon }: { label: string; value: string; detail: string; tone: string; icon: React.ReactNode }) { return <div className="metric-card"><div className={`metric-icon ${tone}`}>{icon}</div><span className="metric-label">{label}</span><strong className="metric-value">{value}</strong><span className={`metric-detail ${tone === 'green' ? 'positive' : ''}`}>{detail}</span></div> }
-function CompetencyRow({ label, value, level, tone, benchmark }: { label: string; value: string; level: string; tone: string; benchmark: string }) { return <div className="competency-row"><div className="competency-label"><strong>{label}</strong><span className="competency-benchmark">{benchmark}</span></div><div className="competency-progress"><div className="progress-track"><div className={`progress-fill ${tone}`} style={{ width: value }}></div></div></div><div className="competency-value"><strong>{value}</strong><span className={`badge badge-${tone}`}>{level}</span></div></div> }
-function CourseCard({ title, provider, meta, tag, icon }: { title: string; provider: string; meta: string; tag: string; icon: React.ReactNode }) { return <article className="course-card"><div className="course-icon">{icon}</div><div className="course-card-body"><span className="course-tag">{tag}</span><strong>{title}</strong><span>{provider}</span><small>{meta}</small></div><button className="icon-button" aria-label={`View ${title}`}><ChevronRight size={17} /></button></article> }
-function Modal({ onClose }: { onClose: () => void }) { return <div className="modal-backdrop"><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-header"><div><p className="eyebrow">Learning workspace</p><h2 id="modal-title">Browse learning catalogue</h2></div><button className="icon-button" onClick={onClose} aria-label="Close modal"><X size={18} /></button></div><p className="modal-copy">Select a capability area to explore role-aligned learning opportunities.</p><label className="field-label" htmlFor="catalogue-skill">Capability area</label><select className="text-input" id="catalogue-skill" defaultValue="python"><option value="python">Python</option><option value="sampling">Sampling</option><option value="gis">GIS</option><option value="ai">AI / ML</option></select><div className="modal-actions"><button className="button button-secondary" onClick={onClose}>Cancel</button><button className="button button-primary" onClick={onClose}>View courses</button></div></div></div> }
 
 export default App
