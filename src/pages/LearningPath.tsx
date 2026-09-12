@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Activity, BookOpen, Check, ChevronRight, LayoutGrid, Sparkles, Target } from 'lucide-react'
 import type { Recommendation, RecommendationIcon } from '../data/mock'
 import { fetchRecommendations } from '../services/api'
-import { LearningRecommendation, ProgressionStep } from '../components/parts'
+import { LearningRecommendation } from '../components/parts'
 
 const sourceIcons = {
   activity: Activity,
@@ -61,16 +61,9 @@ export function LearningPath() {
             <p className="eyebrow">Competency progression</p>
             <h2>Current state to target state</h2>
           </div>
-          <span className="badge badge-blue">3 milestones</span>
         </div>
         <div className="progression-rail">
           <div className="rail-line"><div className="rail-complete"></div></div>
-          <span className="progression-value value-first">67%</span>
-          <span className="progression-value value-second">74%</span>
-          <span className="progression-value value-target">82%</span>
-          <ProgressionStep number="01" label="Current profile" detail="Developing in Python, AI / ML and GIS" tone="current" />
-          <ProgressionStep number="02" label="Priority foundation" detail="Complete recommended foundation courses" tone="middle" />
-          <ProgressionStep number="03" label="Role target" detail="Advanced statistical practice" tone="target" />
         </div>
       </section>
 

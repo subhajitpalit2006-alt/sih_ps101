@@ -13,32 +13,42 @@ import {
   type SearchEntry,
 } from '../data/mock'
 
-function resolve<T>(payload: T, delay = 350): Promise<T> {
-  return new Promise((resolvePromise) => {
-    window.setTimeout(() => resolvePromise(payload), delay)
+const API_BASE: string = import.meta.env.VITE_API_URL ?? ''
+
+async function request<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE}/api${path}`, {
+    signal: AbortSignal.timeout(5000),
   })
+  if (!response.ok) {
+    throw new Error(`API ${path} responded with ${response.status}`)
+  }
+  return response.json() as Promise<T>
+}
+
+function withFallback<T>(fallback: () => T, path: string): Promise<T> {
+  return request<T>(path).catch(() => fallback())
 }
 
 export function fetchOfficers(): Promise<Officer[]> {
-  return resolve(mockOfficers)
+  return withFallback(() => mockOfficers, '/officers')
 }
 
 export function fetchCourses(): Promise<Course[]> {
-  return resolve(mockCourses)
+  return withFallback(() => mockCourses, '/courses')
 }
 
 export function fetchRecommendations(): Promise<Recommendation[]> {
-  return resolve(mockRecommendations)
+  return withFallback(() => mockRecommendations, '/recommendations')
 }
 
 export function fetchDashboardSummary(): Promise<DashboardSummary> {
-  return resolve(mockDashboardSummary, 250)
+  return withFallback(() => mockDashboardSummary, '/summary')
 }
 
 export function fetchAssessmentQuestions(): Promise<AssessmentQuestion[]> {
-  return resolve(mockQuestions, 400)
+  return withFallback(() => mockQuestions, '/assessment/questions')
 }
 
 export function fetchSearchIndex(): Promise<SearchEntry[]> {
-  return resolve(searchSeed, 150)
+  return withFallback(() => searchSeed, '/search')
 }
